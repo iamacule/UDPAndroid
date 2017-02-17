@@ -13,14 +13,14 @@
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="0dp"
-        android:layout_weight="0.2"
+        android:layout_weight="0.25"
         android:orientation="vertical">
 
         <TextView
             android:id="@+id/txtMyIP"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Your IP Address : " />
+            android:text="Your IP Address/Port : " />
 
         <LinearLayout
             android:layout_width="match_parent"
@@ -32,10 +32,28 @@
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="0.5"
-                android:text="Enter 2p2 IP Address : " />
+                android:text="Enter 2p2 Address : " />
 
             <EditText
-                android:id="@+id/edtP2pIp"
+                android:id="@+id/edtP2Ip"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="0.5" />
+        </LinearLayout>
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="left|bottom"
+            android:orientation="horizontal">
+
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="0.5"
+                android:text="Enter 2p2 IP Port : " />
+
+            <EditText
+                android:id="@+id/edtP2pPort"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="0.5" />
@@ -45,7 +63,7 @@
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="0dp"
-        android:layout_weight="0.8"
+        android:layout_weight="0.75"
         android:orientation="vertical">
 
         <android.support.v7.widget.CardView
