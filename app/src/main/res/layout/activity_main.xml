@@ -35,8 +35,9 @@
                 android:text="Enter 2p2 Address : " />
 
             <EditText
-                android:id="@+id/edtP2Ip"
+                android:id="@+id/edtP2pIp"
                 android:layout_width="0dp"
+                android:inputType="phone"
                 android:layout_height="wrap_content"
                 android:layout_weight="0.5" />
         </LinearLayout>
@@ -55,6 +56,7 @@
             <EditText
                 android:id="@+id/edtP2pPort"
                 android:layout_width="0dp"
+                android:inputType="phone"
                 android:layout_height="wrap_content"
                 android:layout_weight="0.5" />
         </LinearLayout>
