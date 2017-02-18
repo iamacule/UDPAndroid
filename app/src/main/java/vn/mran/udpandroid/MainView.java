@@ -32,4 +32,6 @@ public interface MainView {
     void onReceiveVideoError();
 
     void loading(String message);
+
+    void onProgressUpdate(int value);
 }

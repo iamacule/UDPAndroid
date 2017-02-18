@@ -62,6 +62,7 @@ public class MainActivity extends AppCompatActivity implements MainView, View.On
 
         progressDialog = new ProgressDialog(this);
         progressDialog.setCancelable(false);
+        progressDialog.setMax(100);
         progressDialog.setCanceledOnTouchOutside(false);
 
         displayMyIpAddress();
@@ -250,6 +251,16 @@ public class MainActivity extends AppCompatActivity implements MainView, View.On
             public void run() {
                 progressDialog.setMessage(message);
                 progressDialog.show();
+            }
+        });
+    }
+
+    @Override
+    public void onProgressUpdate(final int value) {
+        runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                progressDialog.setProgress(value);
             }
         });
     }

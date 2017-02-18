@@ -88,12 +88,13 @@ public class MainPresenter {
                     clientSock = ss.accept();
                     DataOutputStream dos = new DataOutputStream(clientSock.getOutputStream());
                     FileInputStream fis = new FileInputStream(file);
-                    byte[] buffer = new byte[4096];
-
+                    byte[] buffer = new byte[1024];
                     while (fis.read(buffer) > 0) {
                         dos.write(buffer);
+                        if (dos.size()>0){
+                            view.onProgressUpdate((int) (dos.size() / file.length() * 100));
+                        }
                     }
-
                     fis.close();
                     dos.close();
                     clientSock.close();
@@ -152,11 +153,16 @@ public class MainPresenter {
                                 Log.d(TAG, "run: Receiving partner Port : " + newPort);
                                 String fileLength = receiveText();
                                 Log.d(TAG, "run: Receiving file size : " + fileLength);
-                                Bitmap responseBitmap = BitmapFactory.decodeFile(receiveFile(ip, Integer.parseInt(newPort), fileName,
-                                        Integer.parseInt(fileLength)).getPath());
-                                if (responseBitmap != null) {
-                                    view.onReceiveImageSuccess(responseBitmap, ip);
-                                } else {
+                                File file = receiveFile(ip, Integer.parseInt(newPort), fileName,
+                                        Integer.parseInt(fileLength));
+                                if (file!=null){
+                                    Bitmap responseBitmap = BitmapFactory.decodeFile(file.getPath());
+                                    if (responseBitmap != null) {
+                                        view.onReceiveImageSuccess(responseBitmap, ip);
+                                    } else {
+                                        view.onReceiveImageError();
+                                    }
+                                }else {
                                     view.onReceiveImageError();
                                 }
                                 break;
@@ -180,7 +186,7 @@ public class MainPresenter {
                                 Log.d(TAG, "run: Receiving file size : " + fileLength);
                                 File file = receiveFile(ip, Integer.parseInt(newPort), fileName, Integer.parseInt(fileLength));
                                 if (file != null) {
-                                    view.onReceiveVideoSuccess(file , ip);
+                                    view.onReceiveVideoSuccess(file, ip);
                                 } else {
                                     view.onReceiveVideoError();
                                 }
@@ -206,20 +212,26 @@ public class MainPresenter {
                 s = new Socket(ip, port);
                 DataInputStream dis = new DataInputStream(s.getInputStream());
                 FileOutputStream fos = new FileOutputStream(file);
-                byte[] buffer = new byte[4096];
+                byte[] buffer = new byte[1024];
 
                 int read = 0;
                 int totalRead = 0;
                 while ((read = dis.read(buffer, 0, Math.min(buffer.length, fileLength))) > 0) {
                     totalRead += read;
                     fileLength -= read;
-                    System.out.println("read " + totalRead + " bytes.");
                     fos.write(buffer, 0, read);
+                    if (totalRead>0){
+                        try {
+                            view.onProgressUpdate((int)(totalRead/fileLength*100));
+                        }catch (ArithmeticException e){
+                        }
+                    }
+                    Log.d(TAG, "receiveFile: "+totalRead);
                 }
 
                 fos.close();
                 dis.close();
-
+                s.close();
                 Log.d(TAG, "receiveFile: file length : " + file.length());
                 return file;
             } catch (Exception e) {
