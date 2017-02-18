@@ -1,36 +1,56 @@
 package vn.mran.udpandroid;
 
+import android.Manifest;
+import android.app.ProgressDialog;
+import android.content.Intent;
+import android.content.pm.PackageManager;
+import android.database.Cursor;
+import android.graphics.Bitmap;
+import android.net.Uri;
 import android.os.Bundle;
+import android.os.SystemClock;
+import android.provider.MediaStore;
+import android.support.annotation.NonNull;
+import android.support.v4.app.ActivityCompat;
+import android.support.v4.content.ContextCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.CardView;
+import android.util.Log;
 import android.view.View;
 import android.widget.EditText;
 import android.widget.TextView;
-import android.widget.Toast;
 
 import java.io.File;
 
 import vn.mran.udpandroid.dialog.DialogSendText;
+import vn.mran.udpandroid.dialog.DialogShowImage;
 import vn.mran.udpandroid.dialog.DialogShowText;
 import vn.mran.udpandroid.toast.Boast;
 import vn.mran.udpandroid.util.Utils;
 
 public class MainActivity extends AppCompatActivity implements MainView, View.OnClickListener {
+    private final int RESULT_LOAD_IMAGE = 0;
+    private final String TAG = getClass().getSimpleName();
+
     private TextView txtMyIP;
     private CardView btnText;
     private CardView btnImage;
     private CardView btnFile;
 
+    private String ip;
     private int port;
 
     private MainPresenter presenter;
 
     private DialogShowText.Build dialogShowText;
 
+    private ProgressDialog progressDialog;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+        requestPermission();
         dialogShowText = new DialogShowText.Build(this);
 
         txtMyIP = (TextView) findViewById(R.id.txtMyIP);
@@ -38,9 +58,13 @@ public class MainActivity extends AppCompatActivity implements MainView, View.On
         btnImage = (CardView) findViewById(R.id.btnImage);
         btnFile = (CardView) findViewById(R.id.btnFile);
 
+        progressDialog = new ProgressDialog(this);
+        progressDialog.setCancelable(false);
+        progressDialog.setCanceledOnTouchOutside(false);
+
         displayMyIpAddress();
 
-        presenter = new MainPresenter(this, port);
+        presenter = new MainPresenter(this, ip, port);
         presenter.startThread();
 
         btnText.setOnClickListener(this);
@@ -56,7 +80,8 @@ public class MainActivity extends AppCompatActivity implements MainView, View.On
 
     private void displayMyIpAddress() {
         port = (int) (Math.random() * 9999) + 1000;
-        String ipAndPort = Utils.getIPAddress(true) + File.separator + port;
+        ip = Utils.getIPAddress(true);
+        String ipAndPort = ip + File.separator + port;
         txtMyIP.setText(txtMyIP.getText() + ipAndPort);
     }
 
@@ -71,32 +96,7 @@ public class MainActivity extends AppCompatActivity implements MainView, View.On
     @Override
     public void onClick(View view) {
         if (errorMessage() == null) {
-            switch (view.getId()) {
-                case R.id.btnText:
-                    presenter.setP2pIP(getEdtP2pIp().getText().toString().trim());
-                    presenter.setP2pPort(Integer.parseInt(getEdtP2pPort().getText().toString().trim()));
-                    presenter.sendMessage(presenter.TYPE_TEXT);
-                    new DialogSendText.Build(MainActivity.this)
-                            .setOnDialogSendTextListener(new DialogSendText.Build.OnDialogSendTextListener() {
-                                @Override
-                                public void onSend(String message) {
-                                    presenter.sendMessage(message);
-                                }
-
-                                @Override
-                                public void onCancel() {
-                                    presenter.sendMessage(presenter.CANCEL);
-                                }
-                            }).show();
-
-                    break;
-                case R.id.btnImage:
-
-                    break;
-                case R.id.btnFile:
-
-                    break;
-            }
+            presenter.setP2pData(view, getEdtP2pIp().getText().toString().trim(), getEdtP2pPort().getText().toString().trim());
         } else {
             Boast.makeText(getApplicationContext(), errorMessage()).show();
         }
@@ -123,5 +123,172 @@ public class MainActivity extends AppCompatActivity implements MainView, View.On
                         .show();
             }
         });
+    }
+
+    @Override
+    public void onPortError() {
+        Boast.makeText(this, "Port error !").show();
+    }
+
+    @Override
+    public void onIpError() {
+        Boast.makeText(this, "IP error !").show();
+    }
+
+    @Override
+    public void onCreateP2pSuccess(int id) {
+        switch (id) {
+            case R.id.btnText:
+                presenter.sendMessage(presenter.TYPE_TEXT);
+                new DialogSendText.Build(MainActivity.this)
+                        .setOnDialogSendTextListener(new DialogSendText.Build.OnDialogSendTextListener() {
+                            @Override
+                            public void onSend(String message) {
+                                presenter.sendMessage(message);
+                            }
+
+                            @Override
+                            public void onCancel() {
+                                presenter.sendMessage(presenter.CANCEL);
+                            }
+                        }).show();
+
+                break;
+            case R.id.btnImage:
+                presenter.sendMessage(presenter.TYPE_IMAGE);
+                Intent i = new Intent(Intent.ACTION_PICK, android.provider.MediaStore.Images.Media.EXTERNAL_CONTENT_URI);
+                startActivityForResult(i, RESULT_LOAD_IMAGE);
+                break;
+            case R.id.btnFile:
+
+                break;
+        }
+    }
+
+    @Override
+    public void onSendImageSuccess() {
+        runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                progressDialog.dismiss();
+                Boast.makeText(MainActivity.this, "Send image success !");
+            }
+        });
+    }
+
+    @Override
+    public void onSendImageError() {
+        runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                progressDialog.dismiss();
+                Boast.makeText(MainActivity.this, "Send image error !");
+            }
+        });
+    }
+
+    @Override
+    public void onReceiveImageError() {
+        runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                progressDialog.dismiss();
+                Boast.makeText(MainActivity.this, "Can not receive image").show();
+            }
+        });
+    }
+
+    @Override
+    public void onReceiveImageSuccess(final Bitmap bitmap, final String ip) {
+        progressDialog.dismiss();
+        runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                Log.d(TAG, "Width : " + bitmap.getWidth());
+                Log.d(TAG, "Height : " + bitmap.getHeight());
+                new DialogShowImage.Build(MainActivity.this).
+                        setTitle("Receive from : " + ip)
+                        .setImage(bitmap).show();
+            }
+        });
+    }
+
+    @Override
+    public void loading(final String message) {
+        runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                progressDialog.setMessage(message);
+                progressDialog.show();
+            }
+        });
+    }
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+        if (requestCode == RESULT_LOAD_IMAGE && resultCode == RESULT_OK && null != data) {
+            Uri selectedImage = data.getData();
+            String[] filePathColumn = {MediaStore.Images.Media.DATA};
+            Cursor cursor = getContentResolver().query(selectedImage, filePathColumn, null, null, null);
+            cursor.moveToFirst();
+            int columnIndex = cursor.getColumnIndex(filePathColumn[0]);
+            String picturePath = cursor.getString(columnIndex);
+            cursor.close();
+            File file = new File(picturePath);
+            if (file.length() > 0) {
+                presenter.sendMessage(file.getName());
+                SystemClock.sleep(20);
+                presenter.sendMessage(ip);
+                SystemClock.sleep(20);
+                presenter.sendMessage(String.valueOf(port + 1));
+                SystemClock.sleep(20);
+                presenter.sendMessage(String.valueOf(file.length()));
+                presenter.sendFile(file);
+            }
+        } else {
+            presenter.sendMessage(presenter.CANCEL);
+            Boast.makeText(MainActivity.this, "Canceled !");
+        }
+    }
+
+    private void requestPermission() {
+        // Here, thisActivity is the current activity
+        if (ContextCompat.checkSelfPermission(this,
+                Manifest.permission.WRITE_EXTERNAL_STORAGE)
+                != PackageManager.PERMISSION_GRANTED) {
+            ActivityCompat.requestPermissions(this,
+                    new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE},
+                    0);
+        }
+        if (ContextCompat.checkSelfPermission(this,
+                Manifest.permission.ACCESS_NETWORK_STATE)
+                != PackageManager.PERMISSION_GRANTED) {
+            ActivityCompat.requestPermissions(this,
+                    new String[]{Manifest.permission.ACCESS_NETWORK_STATE},
+                    1);
+        }
+    }
+
+    @Override
+    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
+        switch (requestCode) {
+            case 0: {
+                // If request is cancelled, the result arrays are empty.
+                if (grantResults.length > 0
+                        && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+
+                    // permission was granted, yay! Do the
+                    // contacts-related task you need to do.
+
+                } else {
+                    finish();
+                }
+                return;
+            }
+
+            // other 'case' lines to check for other
+            // permissions this app might request
+        }
     }
 }
