@@ -18,50 +18,39 @@ import vn.mran.udpandroid.toast.Boast;
  * <p>
  * Copyright 2017 Audi AG, All Rights Reserved
  */
-public class DialogSendText {
+public class DialogShowText {
     public static class Build {
-
-        public interface OnDialogSendTextListener {
-            void onSend(String message);
-
-            void onCancel();
-        }
-
-        private OnDialogSendTextListener onDialogSendTextListener;
-
-        public Build setOnDialogSendTextListener(OnDialogSendTextListener onDialogSendTextListener) {
-            this.onDialogSendTextListener = onDialogSendTextListener;
-            return this;
-        }
 
         private AlertDialog.Builder builder;
         private AlertDialog dialog;
         private TextView txtMessage;
+        private TextView txtTitle;
+        private Button btnOK;
 
         public Build(final Activity activity) {
             builder = new AlertDialog.Builder(activity);
             LayoutInflater inflater = activity.getLayoutInflater();
-            View view = inflater.inflate(R.layout.text_input_dialog, null);
+            View view = inflater.inflate(R.layout.text_show_dialog, null);
             builder.setView(view);
             dialog = builder.create();
-            dialog.setOnDismissListener(new DialogInterface.OnDismissListener() {
-                @Override
-                public void onDismiss(DialogInterface dialogInterface) {
-                    onDialogSendTextListener.onCancel();
-                }
-            });
             txtMessage = (TextView) view.findViewById(R.id.txtMessage);
-            view.findViewById(R.id.btnSend).setOnClickListener(new View.OnClickListener() {
+            txtTitle = (TextView) view.findViewById(R.id.txtTitle);
+            view.findViewById(R.id.btnOK).setOnClickListener(new View.OnClickListener() {
                 @Override
                 public void onClick(View view) {
-                    if (txtMessage.getText().length() > 0) {
-                        onDialogSendTextListener.onSend(txtMessage.getText().toString().trim());
-                        dismiss();
-                    } else {
-                        Boast.makeText(activity, "Please input message !").show();
-                    }
+                    dismiss();
                 }
             });
+        }
+
+        public Build setTitle(String title){
+            txtTitle.setText(title);
+            return this;
+        }
+
+        public Build setMessage(String message){
+            txtMessage.setText(message);
+            return this;
         }
 
         public void show() {

@@ -6,5 +6,5 @@ package vn.mran.udpandroid;
  */
 
 public interface MainView {
-    void onReceiveText(String message);
+    void onReceiveText(String message , String ip);
 }

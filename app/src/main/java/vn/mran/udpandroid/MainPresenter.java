@@ -22,6 +22,8 @@ public class MainPresenter {
     public final String TYPE_IMAGE = "TYPE_IMAGE";
     public final String TYPE_VIDEO = "TYPE_VIDEO";
 
+    public final String CANCEL = "CANCEL";
+
     private MainView view;
     private ListenerThread listenerThread;
     private int myPort;
@@ -34,7 +36,7 @@ public class MainPresenter {
         this.myPort = myPort;
     }
 
-    public void startThread(){
+    public void startThread() {
         Log.d(TAG, "startThread: ");
         listenerThread = new ListenerThread();
         listenerThread.start();
@@ -42,7 +44,7 @@ public class MainPresenter {
 
     public void endThread() {
         Log.d(TAG, "endThread: ");
-        if (listenerThread!=null && listenerThread.isAlive()){
+        if (listenerThread != null && listenerThread.isAlive()) {
             listenerThread.endThread();
             listenerThread = null;
         }
@@ -67,6 +69,7 @@ public class MainPresenter {
     private class ListenerThread extends Thread {
         private volatile boolean run = true;
         private DatagramSocket datagramSocket;
+        private DatagramPacket receivePacket;
 
         private ListenerThread() {
             try {
@@ -79,32 +82,27 @@ public class MainPresenter {
         @Override
         public void run() {
             byte[] receiveData = new byte[1024];
+            receivePacket = new DatagramPacket(receiveData, receiveData.length);
             while (run && !Thread.currentThread().isInterrupted()) {
-                try {
-                    Log.d(TAG, "run: waiting");
-                    DatagramPacket receivePacket = new DatagramPacket(receiveData, receiveData.length);
-                    datagramSocket.receive(receivePacket);
-                    String type = new String(
-                            receivePacket.getData(),
-                            receivePacket.getOffset(),
-                            receivePacket.getLength(),
-                            StandardCharsets.UTF_8 // or some other charset
-                    );
-                    Log.d(TAG, "Data : "+type);
-                    switch (type) {
-                        case TYPE_TEXT:
-                            Log.d(TAG, "run: TYPE_TEXT");
-                            view.onReceiveText(type);
-                            break;
-                        case TYPE_IMAGE:
-                            Log.d(TAG, "run: TYPE_IMAGE");
-                            break;
-                        case TYPE_VIDEO:
-                            Log.d(TAG, "run: TYPE_VIDEO");
-                            break;
-                    }
-                } catch (Exception e) {
-                    e.printStackTrace();
+                switch (receiveText()) {
+                    case TYPE_TEXT:
+                        Log.d(TAG, "run: TYPE_TEXT");
+                        while (true) {
+                            String data = receiveText();
+                            if (!data.equals(CANCEL)) {
+                                view.onReceiveText(data, receivePacket.getSocketAddress().toString());
+                                break;
+                            } else {
+                                break;
+                            }
+                        }
+                        break;
+                    case TYPE_IMAGE:
+                        Log.d(TAG, "run: TYPE_IMAGE");
+                        break;
+                    case TYPE_VIDEO:
+                        Log.d(TAG, "run: TYPE_VIDEO");
+                        break;
                 }
             }
         }
@@ -112,6 +110,20 @@ public class MainPresenter {
         public void endThread() {
             run = false;
             Thread.currentThread().interrupt();
+        }
+
+        private String receiveText() {
+            try {
+                datagramSocket.receive(receivePacket);
+                return new String(
+                        receivePacket.getData(),
+                        receivePacket.getOffset(),
+                        receivePacket.getLength(),
+                        StandardCharsets.UTF_8
+                );
+            } catch (Exception e) {
+                return null;
+            }
         }
     }
 

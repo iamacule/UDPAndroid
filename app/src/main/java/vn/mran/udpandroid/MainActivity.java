@@ -10,6 +10,9 @@ import android.widget.Toast;
 
 import java.io.File;
 
+import vn.mran.udpandroid.dialog.DialogSendText;
+import vn.mran.udpandroid.dialog.DialogShowText;
+import vn.mran.udpandroid.toast.Boast;
 import vn.mran.udpandroid.util.Utils;
 
 public class MainActivity extends AppCompatActivity implements MainView, View.OnClickListener {
@@ -22,10 +25,13 @@ public class MainActivity extends AppCompatActivity implements MainView, View.On
 
     private MainPresenter presenter;
 
+    private DialogShowText.Build dialogShowText;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+        dialogShowText = new DialogShowText.Build(this);
 
         txtMyIP = (TextView) findViewById(R.id.txtMyIP);
         btnText = (CardView) findViewById(R.id.btnText);
@@ -64,30 +70,35 @@ public class MainActivity extends AppCompatActivity implements MainView, View.On
 
     @Override
     public void onClick(View view) {
-        switch (view.getId()) {
-            case R.id.btnText:
-                if (errorMessage() == null) {
+        if (errorMessage() == null) {
+            switch (view.getId()) {
+                case R.id.btnText:
                     presenter.setP2pIP(getEdtP2pIp().getText().toString().trim());
                     presenter.setP2pPort(Integer.parseInt(getEdtP2pPort().getText().toString().trim()));
                     presenter.sendMessage(presenter.TYPE_TEXT);
-                } else {
-                    Toast.makeText(getApplicationContext(), errorMessage(), Toast.LENGTH_SHORT).show();
-                }
-                break;
-            case R.id.btnImage:
-                if (errorMessage() == null) {
+                    new DialogSendText.Build(MainActivity.this)
+                            .setOnDialogSendTextListener(new DialogSendText.Build.OnDialogSendTextListener() {
+                                @Override
+                                public void onSend(String message) {
+                                    presenter.sendMessage(message);
+                                }
 
-                } else {
-                    Toast.makeText(getApplicationContext(), errorMessage(), Toast.LENGTH_SHORT).show();
-                }
-                break;
-            case R.id.btnFile:
-                if (errorMessage() == null) {
+                                @Override
+                                public void onCancel() {
+                                    presenter.sendMessage(presenter.CANCEL);
+                                }
+                            }).show();
 
-                } else {
-                    Toast.makeText(getApplicationContext(), errorMessage(), Toast.LENGTH_SHORT).show();
-                }
-                break;
+                    break;
+                case R.id.btnImage:
+
+                    break;
+                case R.id.btnFile:
+
+                    break;
+            }
+        } else {
+            Boast.makeText(getApplicationContext(), errorMessage()).show();
         }
     }
 
@@ -102,11 +113,14 @@ public class MainActivity extends AppCompatActivity implements MainView, View.On
     }
 
     @Override
-    public void onReceiveText(final String message) {
+    public void onReceiveText(final String message, final String ip) {
         runOnUiThread(new Runnable() {
             @Override
             public void run() {
-                Toast.makeText(getApplicationContext(),message,Toast.LENGTH_SHORT).show();
+                dialogShowText.dismiss();
+                dialogShowText.setTitle("Receive from : " + ip)
+                        .setMessage(message)
+                        .show();
             }
         });
     }
