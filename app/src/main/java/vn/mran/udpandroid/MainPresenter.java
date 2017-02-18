@@ -11,7 +11,6 @@ import java.io.DataOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
-import java.io.IOException;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
@@ -23,7 +22,7 @@ import java.nio.charset.StandardCharsets;
 import vn.mran.udpandroid.model.P2pData;
 
 /**
- * Created by thong on 2/17/2017.
+ * Created by AnPham on 2/17/2017.
  * PROJECT UDPAndroid
  */
 
@@ -41,9 +40,8 @@ public class MainPresenter {
     private int myPort;
     private String myIP;
 
-    public MainPresenter(MainView view, String myIp, int myPort) {
+    public MainPresenter(MainView view, int myPort) {
         this.view = view;
-        this.myIP = myIP;
         this.myPort = myPort;
     }
 
@@ -104,7 +102,7 @@ public class MainPresenter {
                 } catch (Exception e) {
                     e.printStackTrace();
                     view.onSendImageError();
-                }finally {
+                } finally {
                 }
             }
         }).start();
@@ -154,8 +152,8 @@ public class MainPresenter {
                                 Log.d(TAG, "run: Receiving partner Port : " + newPort);
                                 String fileLength = receiveText();
                                 Log.d(TAG, "run: Receiving file size : " + fileLength);
-                                Bitmap responseBitmap = receiveBitmap(ip, Integer.parseInt(newPort), fileName,
-                                        Integer.parseInt(fileLength));
+                                Bitmap responseBitmap = BitmapFactory.decodeFile(receiveFile(ip, Integer.parseInt(newPort), fileName,
+                                        Integer.parseInt(fileLength)).getPath());
                                 if (responseBitmap != null) {
                                     view.onReceiveImageSuccess(responseBitmap, ip);
                                 } else {
@@ -169,12 +167,34 @@ public class MainPresenter {
                         break;
                     case TYPE_VIDEO:
                         Log.d(TAG, "run: TYPE_VIDEO");
+                        while (true) {
+                            String fileName = receiveText();
+                            if (!fileName.equals(CANCEL)) {
+                                view.loading("Receiving ... ");
+                                Log.d(TAG, "run: Receiving file name : " + fileName);
+                                String ip = receiveText();
+                                Log.d(TAG, "run: Receiving partner IP : " + ip);
+                                String newPort = receiveText();
+                                Log.d(TAG, "run: Receiving partner Port : " + newPort);
+                                String fileLength = receiveText();
+                                Log.d(TAG, "run: Receiving file size : " + fileLength);
+                                File file = receiveFile(ip, Integer.parseInt(newPort), fileName, Integer.parseInt(fileLength));
+                                if (file != null) {
+                                    view.onReceiveVideoSuccess(file , ip);
+                                } else {
+                                    view.onReceiveVideoError();
+                                }
+                                break;
+                            } else {
+                                break;
+                            }
+                        }
                         break;
                 }
             }
         }
 
-        private Bitmap receiveBitmap(String ip, int port, String fileName, int fileLength) {
+        private File receiveFile(String ip, int port, String fileName, int fileLength) {
             Socket s;
             try {
                 File file = new File(Environment.getExternalStorageDirectory(), fileName);
@@ -200,8 +220,8 @@ public class MainPresenter {
                 fos.close();
                 dis.close();
 
-                Log.d(TAG, "receiveBitmap: file length : " + file.length());
-                return BitmapFactory.decodeFile(file.getPath());
+                Log.d(TAG, "receiveFile: file length : " + file.length());
+                return file;
             } catch (Exception e) {
                 e.printStackTrace();
             }

@@ -25,11 +25,13 @@ import java.io.File;
 import vn.mran.udpandroid.dialog.DialogSendText;
 import vn.mran.udpandroid.dialog.DialogShowImage;
 import vn.mran.udpandroid.dialog.DialogShowText;
+import vn.mran.udpandroid.dialog.DialogShowVideo;
 import vn.mran.udpandroid.toast.Boast;
 import vn.mran.udpandroid.util.Utils;
 
 public class MainActivity extends AppCompatActivity implements MainView, View.OnClickListener {
     private final int RESULT_LOAD_IMAGE = 0;
+    private final int RESULT_LOAD_VIDEO = 1;
     private final String TAG = getClass().getSimpleName();
 
     private TextView txtMyIP;
@@ -64,7 +66,7 @@ public class MainActivity extends AppCompatActivity implements MainView, View.On
 
         displayMyIpAddress();
 
-        presenter = new MainPresenter(this, ip, port);
+        presenter = new MainPresenter(this, port);
         presenter.startThread();
 
         btnText.setOnClickListener(this);
@@ -156,11 +158,15 @@ public class MainActivity extends AppCompatActivity implements MainView, View.On
                 break;
             case R.id.btnImage:
                 presenter.sendMessage(presenter.TYPE_IMAGE);
-                Intent i = new Intent(Intent.ACTION_PICK, android.provider.MediaStore.Images.Media.EXTERNAL_CONTENT_URI);
-                startActivityForResult(i, RESULT_LOAD_IMAGE);
+                Intent intent = new Intent(Intent.ACTION_PICK);
+                intent.setType("image/*");
+                startActivityForResult(intent, RESULT_LOAD_IMAGE);
                 break;
             case R.id.btnFile:
-
+                presenter.sendMessage(presenter.TYPE_VIDEO);
+                Intent intent2 = new Intent(Intent.ACTION_PICK);
+                intent2.setType("video/*");
+                startActivityForResult(intent2, RESULT_LOAD_VIDEO);
                 break;
         }
     }
@@ -200,15 +206,39 @@ public class MainActivity extends AppCompatActivity implements MainView, View.On
 
     @Override
     public void onReceiveImageSuccess(final Bitmap bitmap, final String ip) {
-        progressDialog.dismiss();
         runOnUiThread(new Runnable() {
             @Override
             public void run() {
+                progressDialog.dismiss();
                 Log.d(TAG, "Width : " + bitmap.getWidth());
                 Log.d(TAG, "Height : " + bitmap.getHeight());
-                new DialogShowImage.Build(MainActivity.this).
-                        setTitle("Receive from : " + ip)
+                new DialogShowImage.Build(MainActivity.this)
+                        .setTitle("Receive from : " + ip)
                         .setImage(bitmap).show();
+            }
+        });
+    }
+
+    @Override
+    public void onReceiveVideoSuccess(final File file, final String ip) {
+        runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                progressDialog.dismiss();
+                new DialogShowVideo.Build(MainActivity.this)
+                        .setTitle("Receive from : " + ip)
+                        .show(file);
+            }
+        });
+    }
+
+    @Override
+    public void onReceiveVideoError() {
+        runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                progressDialog.dismiss();
+                Boast.makeText(MainActivity.this, "Can not receive video").show();
             }
         });
     }
@@ -227,15 +257,15 @@ public class MainActivity extends AppCompatActivity implements MainView, View.On
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
-        if (requestCode == RESULT_LOAD_IMAGE && resultCode == RESULT_OK && null != data) {
+        if (resultCode == RESULT_OK && null != data) {
             Uri selectedImage = data.getData();
             String[] filePathColumn = {MediaStore.Images.Media.DATA};
             Cursor cursor = getContentResolver().query(selectedImage, filePathColumn, null, null, null);
             cursor.moveToFirst();
             int columnIndex = cursor.getColumnIndex(filePathColumn[0]);
-            String picturePath = cursor.getString(columnIndex);
+            String filePath = cursor.getString(columnIndex);
             cursor.close();
-            File file = new File(picturePath);
+            File file = new File(filePath);
             if (file.length() > 0) {
                 presenter.sendMessage(file.getName());
                 SystemClock.sleep(20);
