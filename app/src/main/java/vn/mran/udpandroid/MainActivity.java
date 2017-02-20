@@ -28,6 +28,7 @@ import vn.mran.udpandroid.dialog.DialogShowText;
 import vn.mran.udpandroid.dialog.DialogShowVideo;
 import vn.mran.udpandroid.toast.Boast;
 import vn.mran.udpandroid.util.Utils;
+import vn.mran.udpandroid.wiget.CustomProgress;
 
 public class MainActivity extends AppCompatActivity implements MainView, View.OnClickListener {
     private final int RESULT_LOAD_IMAGE = 0;
@@ -45,8 +46,7 @@ public class MainActivity extends AppCompatActivity implements MainView, View.On
     private MainPresenter presenter;
 
     private DialogShowText.Build dialogShowText;
-
-    private ProgressDialog progressDialog;
+    private CustomProgress customProgress;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -54,16 +54,12 @@ public class MainActivity extends AppCompatActivity implements MainView, View.On
         setContentView(R.layout.activity_main);
         requestPermission();
         dialogShowText = new DialogShowText.Build(this);
+        customProgress = new CustomProgress(getWindow().getDecorView().getRootView());
 
         txtMyIP = (TextView) findViewById(R.id.txtMyIP);
         btnText = (CardView) findViewById(R.id.btnText);
         btnImage = (CardView) findViewById(R.id.btnImage);
         btnFile = (CardView) findViewById(R.id.btnFile);
-
-        progressDialog = new ProgressDialog(this);
-        progressDialog.setCancelable(false);
-        progressDialog.setMax(100);
-        progressDialog.setCanceledOnTouchOutside(false);
 
         displayMyIpAddress();
 
@@ -177,7 +173,7 @@ public class MainActivity extends AppCompatActivity implements MainView, View.On
         runOnUiThread(new Runnable() {
             @Override
             public void run() {
-                progressDialog.dismiss();
+                customProgress.setVisibility(View.GONE);
                 Boast.makeText(MainActivity.this, "Send image success !");
             }
         });
@@ -188,7 +184,7 @@ public class MainActivity extends AppCompatActivity implements MainView, View.On
         runOnUiThread(new Runnable() {
             @Override
             public void run() {
-                progressDialog.dismiss();
+                customProgress.setVisibility(View.GONE);
                 Boast.makeText(MainActivity.this, "Send image error !");
             }
         });
@@ -199,7 +195,7 @@ public class MainActivity extends AppCompatActivity implements MainView, View.On
         runOnUiThread(new Runnable() {
             @Override
             public void run() {
-                progressDialog.dismiss();
+                customProgress.setVisibility(View.GONE);
                 Boast.makeText(MainActivity.this, "Can not receive image").show();
             }
         });
@@ -210,7 +206,7 @@ public class MainActivity extends AppCompatActivity implements MainView, View.On
         runOnUiThread(new Runnable() {
             @Override
             public void run() {
-                progressDialog.dismiss();
+                customProgress.setVisibility(View.GONE);
                 Log.d(TAG, "Width : " + bitmap.getWidth());
                 Log.d(TAG, "Height : " + bitmap.getHeight());
                 new DialogShowImage.Build(MainActivity.this)
@@ -225,7 +221,7 @@ public class MainActivity extends AppCompatActivity implements MainView, View.On
         runOnUiThread(new Runnable() {
             @Override
             public void run() {
-                progressDialog.dismiss();
+                customProgress.setVisibility(View.GONE);
                 new DialogShowVideo.Build(MainActivity.this)
                         .setTitle("Receive from : " + ip)
                         .show(file);
@@ -238,7 +234,7 @@ public class MainActivity extends AppCompatActivity implements MainView, View.On
         runOnUiThread(new Runnable() {
             @Override
             public void run() {
-                progressDialog.dismiss();
+                customProgress.setVisibility(View.GONE);
                 Boast.makeText(MainActivity.this, "Can not receive video").show();
             }
         });
@@ -249,8 +245,8 @@ public class MainActivity extends AppCompatActivity implements MainView, View.On
         runOnUiThread(new Runnable() {
             @Override
             public void run() {
-                progressDialog.setMessage(message);
-                progressDialog.show();
+                customProgress.setMessage(message);
+                customProgress.setVisibility(View.VISIBLE);
             }
         });
     }
@@ -260,7 +256,7 @@ public class MainActivity extends AppCompatActivity implements MainView, View.On
         runOnUiThread(new Runnable() {
             @Override
             public void run() {
-                progressDialog.setProgress(value);
+                customProgress.setPercent(value);
             }
         });
     }
