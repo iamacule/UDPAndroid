@@ -91,7 +91,7 @@ public class MainPresenter {
                     byte[] buffer = new byte[1024];
                     while (fis.read(buffer) > 0) {
                         dos.write(buffer);
-                        if (dos.size()>0){
+                        if (dos.size() > 0) {
                             view.onProgressUpdate((int) (dos.size() / file.length() * 100));
                         }
                     }
@@ -143,26 +143,19 @@ public class MainPresenter {
                     case TYPE_IMAGE:
                         Log.d(TAG, "run: TYPE_IMAGE");
                         while (true) {
-                            String fileName = receiveText();
-                            if (!fileName.equals(CANCEL)) {
+                            String fileData = receiveText();
+                            if (!fileData.equals(CANCEL)) {
                                 view.loading("Receiving ... ");
-                                Log.d(TAG, "run: Receiving file name : " + fileName);
-                                String ip = receiveText();
-                                Log.d(TAG, "run: Receiving partner IP : " + ip);
-                                String newPort = receiveText();
-                                Log.d(TAG, "run: Receiving partner Port : " + newPort);
-                                String fileLength = receiveText();
-                                Log.d(TAG, "run: Receiving file size : " + fileLength);
-                                File file = receiveFile(ip, Integer.parseInt(newPort), fileName,
-                                        Integer.parseInt(fileLength));
-                                if (file!=null){
+                                FileData f = new FileData(fileData);
+                                File file = receiveFile(f.getTcpIp(), f.getPort(), f.getFileName(), f.getFileLength());
+                                if (file != null) {
                                     Bitmap responseBitmap = BitmapFactory.decodeFile(file.getPath());
                                     if (responseBitmap != null) {
-                                        view.onReceiveImageSuccess(responseBitmap, ip);
+                                        view.onReceiveImageSuccess(responseBitmap, f.getTcpIp());
                                     } else {
                                         view.onReceiveImageError();
                                     }
-                                }else {
+                                } else {
                                     view.onReceiveImageError();
                                 }
                                 break;
@@ -174,19 +167,13 @@ public class MainPresenter {
                     case TYPE_VIDEO:
                         Log.d(TAG, "run: TYPE_VIDEO");
                         while (true) {
-                            String fileName = receiveText();
-                            if (!fileName.equals(CANCEL)) {
+                            String fileData = receiveText();
+                            if (!fileData.equals(CANCEL)) {
                                 view.loading("Receiving ... ");
-                                Log.d(TAG, "run: Receiving file name : " + fileName);
-                                String ip = receiveText();
-                                Log.d(TAG, "run: Receiving partner IP : " + ip);
-                                String newPort = receiveText();
-                                Log.d(TAG, "run: Receiving partner Port : " + newPort);
-                                String fileLength = receiveText();
-                                Log.d(TAG, "run: Receiving file size : " + fileLength);
-                                File file = receiveFile(ip, Integer.parseInt(newPort), fileName, Integer.parseInt(fileLength));
+                                FileData f = new FileData(fileData);
+                                File file = receiveFile(f.getTcpIp(), f.getPort(), f.getFileName(), f.getFileLength());
                                 if (file != null) {
-                                    view.onReceiveVideoSuccess(file, ip);
+                                    view.onReceiveVideoSuccess(file, f.getTcpIp());
                                 } else {
                                     view.onReceiveVideoError();
                                 }
@@ -220,13 +207,13 @@ public class MainPresenter {
                     totalRead += read;
                     fileLength -= read;
                     fos.write(buffer, 0, read);
-                    if (totalRead>0){
+                    if (totalRead > 0) {
                         try {
-                            view.onProgressUpdate((int)(totalRead/fileLength*100));
-                        }catch (ArithmeticException e){
+                            view.onProgressUpdate((int) (totalRead / fileLength * 100));
+                        } catch (ArithmeticException e) {
                         }
                     }
-                    Log.d(TAG, "receiveFile: "+totalRead);
+                    Log.d(TAG, "receiveFile: " + totalRead);
                 }
 
                 fos.close();
@@ -274,5 +261,57 @@ public class MainPresenter {
             return;
         }
         view.onCreateP2pSuccess(v.getId());
+    }
+
+    private class FileData {
+        private String fileName;
+        private String tcpIp;
+        private int port;
+        private int fileLength;
+
+        public FileData(String fileData) {
+            String[] data = fileData.split("/");
+            Log.d(TAG, "File Name : " + data[0]);
+            Log.d(TAG, "File IP : " + data[1]);
+            Log.d(TAG, "File Port : " + data[2]);
+            Log.d(TAG, "File Length : " + data[3]);
+
+            setFileName(data[0]);
+            setTcpIp(data[1]);
+            setPort(Integer.parseInt(data[2]));
+            setFileLength(Integer.parseInt(data[3]));
+        }
+
+        public String getFileName() {
+            return fileName;
+        }
+
+        public void setFileName(String fileName) {
+            this.fileName = fileName;
+        }
+
+        public String getTcpIp() {
+            return tcpIp;
+        }
+
+        public void setTcpIp(String tcpIp) {
+            this.tcpIp = tcpIp;
+        }
+
+        public int getPort() {
+            return port;
+        }
+
+        public void setPort(int port) {
+            this.port = port;
+        }
+
+        public int getFileLength() {
+            return fileLength;
+        }
+
+        public void setFileLength(int fileLength) {
+            this.fileLength = fileLength;
+        }
     }
 }

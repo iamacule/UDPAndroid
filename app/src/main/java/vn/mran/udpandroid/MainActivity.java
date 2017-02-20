@@ -278,13 +278,15 @@ public class MainActivity extends AppCompatActivity implements MainView, View.On
             cursor.close();
             File file = new File(filePath);
             if (file.length() > 0) {
-                presenter.sendMessage(file.getName());
+                String fileData = file.getName() +
+                        File.separator +
+                        ip +
+                        File.separator +
+                        String.valueOf(port + 1) +
+                        File.separator +
+                        file.length();
+                presenter.sendMessage(fileData);
                 SystemClock.sleep(20);
-                presenter.sendMessage(ip);
-                SystemClock.sleep(20);
-                presenter.sendMessage(String.valueOf(port + 1));
-                SystemClock.sleep(20);
-                presenter.sendMessage(String.valueOf(file.length()));
                 presenter.sendFile(file);
             }
         } else {
