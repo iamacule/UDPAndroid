@@ -3,6 +3,7 @@ package vn.mran.udpandroid;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.os.Environment;
+import android.os.Handler;
 import android.util.Log;
 import android.view.View;
 
@@ -11,6 +12,7 @@ import java.io.DataOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
+import java.io.IOException;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
@@ -34,6 +36,7 @@ public class MainPresenter {
 
     public final String CANCEL = "CANCEL";
     public final String WAITING_FOR_IMAGE = "WAITING_FOR_IMAGE";
+    private Thread sendFileThread;
 
     private MainView view;
     private ListenerThread listenerThread;
@@ -78,35 +81,74 @@ public class MainPresenter {
 
     public void sendFile(final File file) {
         view.loading("Sending ... ");
-        new Thread(new Runnable() {
+        final Handler requestTimeOut = new Handler();
+        final Runnable destroy = new Runnable() {
+            @Override
+            public void run() {
+                if (sendFileThread != null && sendFileThread.isAlive()) {
+                    sendFileThread.interrupt();
+                    sendFileThread = null;
+                    view.onSendImageError();
+                }
+            }
+        };
+        requestTimeOut.postDelayed(destroy, 5000);
+        sendFileThread = new Thread(new Runnable() {
             @Override
             public void run() {
                 ServerSocket ss = null;
                 Socket clientSock = null;
+                DataOutputStream dos = null;
+                FileInputStream fis = null;
                 try {
+                    Log.d(TAG, "run: Waiting for client");
                     ss = new ServerSocket(myPort + 1);
                     clientSock = ss.accept();
-                    DataOutputStream dos = new DataOutputStream(clientSock.getOutputStream());
-                    FileInputStream fis = new FileInputStream(file);
+                    Log.d(TAG, "run: client accepted");
+                    requestTimeOut.removeCallbacks(destroy);
+                    dos = new DataOutputStream(clientSock.getOutputStream());
+                    fis = new FileInputStream(file);
                     byte[] buffer = new byte[1024];
                     while (fis.read(buffer) > 0) {
                         dos.write(buffer);
-                        if (dos.size() > 0) {
-                            view.onProgressUpdate((int) (dos.size() / file.length() * 100));
+                        try {
+                            double percent = (float) dos.size() / file.length();
+                            int value = (int) (percent * 100);
+                            view.onProgressUpdate(value);
+                        } catch (ArithmeticException e) {
+                            e.printStackTrace();
                         }
                     }
-                    fis.close();
-                    dos.close();
-                    clientSock.close();
-                    ss.close();
                     view.onSendImageSuccess();
                 } catch (Exception e) {
                     e.printStackTrace();
                     view.onSendImageError();
                 } finally {
+
+                    try {
+                        fis.close();
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                    }
+                    try {
+                        dos.close();
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                    }
+                    try {
+                        clientSock.close();
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                    }
+                    try {
+                        ss.close();
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                    }
                 }
             }
-        }).start();
+        });
+        sendFileThread.start();
     }
 
     private class ListenerThread extends Thread {
@@ -188,7 +230,10 @@ public class MainPresenter {
         }
 
         private File receiveFile(String ip, int port, String fileName, int fileLength) {
-            Socket s;
+            final int totalLength = fileLength;
+            Socket s = null;
+            DataInputStream dis = null;
+            FileOutputStream fos = null;
             try {
                 File file = new File(Environment.getExternalStorageDirectory(), fileName);
                 if (file.exists()) {
@@ -197,8 +242,8 @@ public class MainPresenter {
                 file.createNewFile();
 
                 s = new Socket(ip, port);
-                DataInputStream dis = new DataInputStream(s.getInputStream());
-                FileOutputStream fos = new FileOutputStream(file);
+                dis = new DataInputStream(s.getInputStream());
+                fos = new FileOutputStream(file);
                 byte[] buffer = new byte[1024];
 
                 int read = 0;
@@ -209,20 +254,36 @@ public class MainPresenter {
                     fos.write(buffer, 0, read);
                     if (totalRead > 0) {
                         try {
-                            view.onProgressUpdate((int) (totalRead / fileLength * 100));
+                            double percent = (float) totalRead / totalLength;
+                            int value = (int) (percent * 100);
+                            view.onProgressUpdate(value);
                         } catch (ArithmeticException e) {
+                            e.printStackTrace();
                         }
                     }
-                    Log.d(TAG, "receiveFile: " + totalRead);
                 }
 
-                fos.close();
-                dis.close();
-                s.close();
+
                 Log.d(TAG, "receiveFile: file length : " + file.length());
                 return file;
             } catch (Exception e) {
                 e.printStackTrace();
+            } finally {
+                try {
+                    fos.close();
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+                try {
+                    dis.close();
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+                try {
+                    s.close();
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
             }
             return null;
         }
