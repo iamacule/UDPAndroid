@@ -72,8 +72,8 @@ public class MainActivity extends AppCompatActivity implements MainView, View.On
     }
 
     @Override
-    protected void onStop() {
-        super.onStop();
+    protected void onDestroy() {
+        super.onDestroy();
         presenter.endThread();
     }
 

@@ -169,6 +169,7 @@ public class MainPresenter {
             byte[] receiveData = new byte[1024];
             receivePacket = new DatagramPacket(receiveData, receiveData.length);
             while (run && !Thread.currentThread().isInterrupted()) {
+                Log.d(TAG, "run: listening");
                 switch (receiveText()) {
                     case TYPE_TEXT:
                         Log.d(TAG, "run: TYPE_TEXT");
@@ -332,10 +333,6 @@ public class MainPresenter {
 
         public FileData(String fileData) {
             String[] data = fileData.split("/");
-            Log.d(TAG, "File Name : " + data[0]);
-            Log.d(TAG, "File IP : " + data[1]);
-            Log.d(TAG, "File Port : " + data[2]);
-            Log.d(TAG, "File Length : " + data[3]);
 
             setFileName(data[0]);
             setTcpIp(data[1]);
